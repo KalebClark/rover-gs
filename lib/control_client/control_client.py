@@ -14,20 +14,22 @@ import json
 
 class ControlClient(object):
     
-    serverIP   = '192.168.1.190'
-    serverPORT = '5550'
-    request_timeout = 2500
-    request_retries = 10
+    #serverIP   = '192.168.1.190'
+    #serverPORT = '5550'
+    #request_timeout = 2500
+    #request_retries = 10
     sequence = 0
 
-    def __init__(self):
+    def __init__(self, serverIP, serverPORT, request_timeout=2500, request_retries=10):
+        self.serverIP = serverIP
+        self.serverPORT = serverPORT
+        self.request_timeout = request_timeout
+        self.request_retries = request_retries
 
         self.serverAddr = "tcp://"+self.serverIP+":"+self.serverPORT
 
         # Connect to Server
         self.connect()
-
-
 
     def connect(self):
         # Establish connection to server
@@ -40,26 +42,22 @@ class ControlClient(object):
         self.poll = zmq.Poller()
         self.poll.register(self.socket, zmq.POLLIN)
 
-    def send(self):
+    def send(self, payload):
         retries_left = self.request_retries
         sequence = 0
 
         while retries_left:
             # Prepare sequence int
             sequence += 1
-            seq = str(sequence)
-            #request = str(sequence)
+            seq = sequence
+
             print("I: Sending sequence # (%s)" % seq)
             
             # Build payload
-            payload = {}
-            payload['seq'] = seq
-            payload['control'] = {'control': 'iscool'}
-            payload['telemetry'] = {'telemetry': 'iscooler'}
-            payload = json.dumps(payload)
+            payload.update({'seq': seq})
 
             # Send the request
-            self.socket.send(payload)
+            self.socket.send(json.dumps(payload))
 
             expect_reply = True
             while expect_reply:
@@ -90,7 +88,7 @@ class ControlClient(object):
                     print("I: Reconnecting and resending sequence # (%s)" % seq)
                     # RE-Establish connection to server and resend.
                     self.connect()
-                    self.socket.send(payload)
+                    self.socket.send(json.dumps(payload))
 
 
     def receive(self):
@@ -100,8 +98,4 @@ class ControlClient(object):
             return message
         except:
             print("FAIL")
-
-control = ControlClient()
-while True:
-    control.send()
 
