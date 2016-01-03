@@ -6,17 +6,16 @@
 # Control Client
 # Sends control and telmetry from ground station
 import sys
-sys.path.append('/opt/rover/lib')
+#sys.path.append('/opt/rover/lib')
 import time
 import zmq
 import json
-from gamepad import gamepad
+#from gamepad import gamepad
 
 class ControlClient(object):
     
     serverIP   = '192.168.1.190'
     serverPORT = '5550'
-    payload    = {}
     request_timeout = 2500
     request_retries = 10
     sequence = 0
@@ -46,12 +45,21 @@ class ControlClient(object):
         sequence = 0
 
         while retries_left:
+            # Prepare sequence int
             sequence += 1
-            request = str(sequence)
-            print("I: Sending (%s)" % request)
+            seq = str(sequence)
+            #request = str(sequence)
+            print("I: Sending sequence # (%s)" % seq)
+            
+            # Build payload
+            payload = {}
+            payload['seq'] = seq
+            payload['control'] = {'control': 'iscool'}
+            payload['telemetry'] = {'telemetry': 'iscooler'}
+            payload = json.dumps(payload)
 
             # Send the request
-            self.socket.send(request)
+            self.socket.send(payload)
 
             expect_reply = True
             while expect_reply:
@@ -79,10 +87,10 @@ class ControlClient(object):
                         print("E: Server seems to be offline. Abandoning")
                         break
 
-                    print("I: Reconnecting and resending (%s)" % request)
+                    print("I: Reconnecting and resending sequence # (%s)" % seq)
                     # RE-Establish connection to server and resend.
                     self.connect()
-                    self.socket.send(request)
+                    self.socket.send(payload)
 
 
     def receive(self):
